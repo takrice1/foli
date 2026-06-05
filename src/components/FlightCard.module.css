@@ -1,0 +1,36 @@
+.card { background: var(--card); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 16px 16px 14px; margin-bottom: 12px; position: relative; overflow: hidden; }
+.card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
+.isFirst::before { background: var(--green); }
+.isLast::before  { background: var(--red); }
+.top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.badge { font-family: var(--mono); font-size: 9px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
+.badgeFirst { background: #d8f3dc; color: var(--green); }
+.badgeLast  { background: #fde8df; color: var(--red); }
+.airline { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: right; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.route { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.code { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.arrow { flex: 1; text-align: center; color: var(--muted); font-size: 18px; }
+.times { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+.timeCol { }
+.right { text-align: right; }
+.time { font-family: var(--mono); font-size: 22px; font-weight: 500; }
+.timeLabel { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+.mid { text-align: center; }
+.duration { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.divider { height: 1px; background: var(--border); margin: 5px 0; }
+.flightNum { font-family: var(--mono); font-size: 11px; font-weight: 500; }
+.foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.stops, .aircraft { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.status { font-family: var(--mono); font-size: 9px; font-weight: 500; padding: 3px 8px; border-radius: 10px; text-transform: capitalize; letter-spacing: 0.06em; }
+.scheduled { background: #e8f4fd; color: var(--blue); }
+.active    { background: #d8f3dc; color: var(--green); }
+.landed    { background: #f0f0f0; color: var(--muted); }
+.cancelled { background: #fde8df; color: var(--red); }
+.unknown   { background: #f5f5f0; color: var(--muted); }
+@media (prefers-color-scheme: dark) {
+  .badgeFirst { background: #0d2614; }
+  .badgeLast  { background: #2a0f05; }
+  .scheduled  { background: #0d1a26; }
+  .active     { background: #0d2614; }
+  .landed, .unknown { background: #1e1e24; }
+}

@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:    #0d0d12;
+  --paper:  #f2efe9;
+  --accent: #e63946;
+  --green:  #2d6a4f;
+  --red:    #c1440e;
+  --blue:   #457b9d;
+  --muted:  #9a9590;
+  --card:   #ffffff;
+  --border: #ddd9d2;
+  --radius: 16px;
+  --mono:   'DM Mono', monospace;
+  --sans:   'Syne', sans-serif;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--sans);
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:    #f2efe9;
+    --paper:  #0d0d12;
+    --card:   #14141a;
+    --border: #26262f;
+    --muted:  #666672;
+  }
+}

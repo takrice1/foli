@@ -1,0 +1,7 @@
+name               = "foli-proxy"
+main               = "index.js"
+compatibility_date = "2024-01-01"
+
+# Deploy:  npx wrangler deploy
+# Set key: npx wrangler secret put FA_API_KEY
+# Never put your API key in this file.

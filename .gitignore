@@ -8,3 +8,4 @@ dist/
 worker/node_modules/
 
 .vercel
+.claude/

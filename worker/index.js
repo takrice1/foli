@@ -11,11 +11,9 @@ const FA_BASE = 'https://aeroapi.flightaware.com/aeroapi';
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:4173',
-  'https://foli.app',
-  'https://www.foli.app',
   'https://flyfoli.com',
   'https://www.flyfoli.com',
-  'https://foli.vercel.app',
+  'https://first-and-last-flights.vercel.app',
 ];
 
 function corsHeaders(origin) {

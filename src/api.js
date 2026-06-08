@@ -1,3 +1,5 @@
+import { airlineName } from './airlines.js';
+
 const BASE = '/api';
 
 // ── Client-side cache ────────────────────────────────────────────────────────
@@ -151,7 +153,7 @@ export function toCard(f, direction, airportCode) {
 
   return {
     flightNumber:  f.ident_iata || f.ident || f.flight_number || '—',
-    airline:       f.operator_iata || f.operator || f.airline || '—',
+    airline:       airlineName(f.operator_iata || f.operator || f.airline || '—'),
     origin:        f.origin?.code_iata      || f.origin?.code      || (direction === 'dep' ? airportCode : '—'),
     destination:   f.destination?.code_iata || f.destination?.code || (direction === 'arr' ? airportCode : '—'),
     departureTime: fmtTime(displayDep),

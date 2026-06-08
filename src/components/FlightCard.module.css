@@ -6,7 +6,7 @@
 .badge { font-family: var(--mono); font-size: 9px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
 .badgeFirst { background: #d8f3dc; color: var(--green); }
 .badgeLast  { background: #fde8df; color: var(--red); }
-.airline { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: right; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.airline { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: right; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .route { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .code { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
 .arrow { flex: 1; text-align: center; color: var(--muted); font-size: 18px; }

@@ -11,16 +11,58 @@ async function apiFetch(path) {
   return res.json();
 }
 
+// ── Day-split query strategy ─────────────────────────────────────────────────
+//
+// The AeroAPI "departures/arrivals" endpoint anchors results to the current
+// time when given a broad date range, so querying 00:00–23:59 only returns
+// flights near "now". Two targeted windows capture the true ends of the day:
+//
+//   Early window  (00:00–09:00 UTC) → /flights/departures|arrivals
+//     Forces the API into the historical section of the day, returning the
+//     actual first flights from the start of the UTC day.
+//
+//   Late window   (18:00–23:59 UTC) → /flights/scheduled_departures|arrivals
+//     The "scheduled" endpoints return future flight schedules, covering
+//     evening flights that haven't happened yet.
+//
+// Both sets are merged; firstAndLast() then sorts the combined pool and picks
+// the chronological extremes — the true first and last flights of the day.
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function fetchDepartures(airportCode, dateStr) {
-  const start = `${dateStr}T00:00:00Z`;
-  const end   = `${dateStr}T23:59:59Z`;
-  return apiFetch(`/airports/${airportCode}/flights/departures?${new URLSearchParams({ start, end, max_pages: 1 })}`);
+  const [earlyRes, lateRes] = await Promise.all([
+    apiFetch(`/airports/${airportCode}/flights/departures?${new URLSearchParams({
+      start: `${dateStr}T00:00:00Z`,
+      end:   `${dateStr}T09:00:00Z`,
+      max_pages: 1,
+    })}`),
+    apiFetch(`/airports/${airportCode}/flights/scheduled_departures?${new URLSearchParams({
+      start: `${dateStr}T18:00:00Z`,
+      end:   `${dateStr}T23:59:59Z`,
+      max_pages: 3,
+    })}`).catch(() => null),
+  ]);
+  const early = earlyRes?.departures || [];
+  const late  = lateRes?.scheduled_departures || lateRes?.departures || [];
+  return { departures: [...early, ...late] };
 }
 
 export async function fetchArrivals(airportCode, dateStr) {
-  const start = `${dateStr}T00:00:00Z`;
-  const end   = `${dateStr}T23:59:59Z`;
-  return apiFetch(`/airports/${airportCode}/flights/arrivals?${new URLSearchParams({ start, end, max_pages: 1 })}`);
+  const [earlyRes, lateRes] = await Promise.all([
+    apiFetch(`/airports/${airportCode}/flights/arrivals?${new URLSearchParams({
+      start: `${dateStr}T00:00:00Z`,
+      end:   `${dateStr}T09:00:00Z`,
+      max_pages: 1,
+    })}`),
+    apiFetch(`/airports/${airportCode}/flights/scheduled_arrivals?${new URLSearchParams({
+      start: `${dateStr}T18:00:00Z`,
+      end:   `${dateStr}T23:59:59Z`,
+      max_pages: 3,
+    })}`).catch(() => null),
+  ]);
+  const early = earlyRes?.arrivals || [];
+  const late  = lateRes?.scheduled_arrivals || lateRes?.arrivals || [];
+  return { arrivals: [...early, ...late] };
 }
 
 function fmtTime(iso) {
@@ -39,7 +81,9 @@ function calcDuration(dep, arr) {
 }
 
 export function parseFlights(data) {
-  return data?.departures || data?.arrivals || data?.scheduled_departures || data?.scheduled_arrivals || data?.flights || [];
+  return data?.departures || data?.arrivals
+      || data?.scheduled_departures || data?.scheduled_arrivals
+      || data?.flights || [];
 }
 
 export function toCard(f, direction, airportCode) {
@@ -48,7 +92,6 @@ export function toCard(f, direction, airportCode) {
   //   *_off = wheels-off     (always present when a time is known)
   //   *_in  = gate arrival   (null for many flights)
   //   *_on  = wheels-on      (always present when a time is known)
-  // Use gate times first for accuracy; fall back to block times.
   const depISO = f.scheduled_out || f.scheduled_off
                || f.estimated_out || f.estimated_off
                || f.actual_out   || f.actual_off
@@ -59,25 +102,26 @@ export function toCard(f, direction, airportCode) {
                || null;
 
   return {
-    // Prefer IATA flight number ("DL123") over ICAO callsign ("DAL123")
     flightNumber:  f.ident_iata || f.ident || f.flight_number || '—',
-    // Prefer IATA carrier code ("DL") over ICAO ("DAL")
     airline:       f.operator_iata || f.operator || f.airline || '—',
     origin:        f.origin?.code_iata      || f.origin?.code      || (direction === 'dep' ? airportCode : '—'),
     destination:   f.destination?.code_iata || f.destination?.code || (direction === 'arr' ? airportCode : '—'),
     departureTime: fmtTime(depISO),
     arrivalTime:   fmtTime(arrISO),
     duration:      calcDuration(depISO, arrISO),
-    aircraft:      (f.aircraft_type || '').trim(),  // API returns "B763 " with trailing space
+    aircraft:      (f.aircraft_type || '').trim(),
     status:        f.status || 'Scheduled',
     rawDep:        depISO,
+    rawArr:        arrISO,
     direction,
   };
 }
 
-export function firstAndLast(cards) {
-  const valid = cards.filter(c => c.rawDep);
+// sortKey: 'rawDep' for departures (sort by gate-out/wheels-off),
+//          'rawArr' for arrivals (sort by gate-in/wheels-on)
+export function firstAndLast(cards, sortKey = 'rawDep') {
+  const valid = cards.filter(c => c[sortKey]);
   if (!valid.length) return { first: null, last: null, count: 0 };
-  const sorted = [...valid].sort((a, b) => new Date(a.rawDep) - new Date(b.rawDep));
+  const sorted = [...valid].sort((a, b) => new Date(a[sortKey]) - new Date(b[sortKey]));
   return { first: sorted[0], last: sorted[sorted.length - 1], count: sorted.length };
 }

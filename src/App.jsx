@@ -9,9 +9,8 @@ function todayStr() {
 }
 
 export default function App() {
-  const [airport, setAirport]         = useState('');
-  const [destination, setDestination] = useState('');
-  const [date, setDate]               = useState(todayStr());
+  const [airport, setAirport] = useState('');
+  const [date, setDate]       = useState(todayStr());
   const [tab, setTab]                 = useState('dep');
   const [loading, setLoading]         = useState(false);
   const [results, setResults]         = useState(null);
@@ -25,14 +24,10 @@ export default function App() {
         fetchDepartures(airport, date),
         fetchArrivals(airport, date),
       ]);
-      let depCards = parseFlights(depData).map(f => toCard(f, 'dep', airport));
-      let arrCards = parseFlights(arrData).map(f => toCard(f, 'arr', airport));
-      if (destination) {
-        depCards = depCards.filter(f => f.destination === destination);
-        arrCards = arrCards.filter(f => f.origin === destination);
-      }
-      const deps = firstAndLast(depCards);
-      const arrs = firstAndLast(arrCards);
+      const depCards = parseFlights(depData).map(f => toCard(f, 'dep', airport));
+      const arrCards = parseFlights(arrData).map(f => toCard(f, 'arr', airport));
+      const deps = firstAndLast(depCards, 'rawDep');
+      const arrs = firstAndLast(arrCards, 'rawArr');
       setResults({
         code: airport,
         date: new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
@@ -69,7 +64,6 @@ export default function App() {
       {/* ── Search ── */}
       <section className={styles.panel}>
         <AirportPicker label="Airport" icon="🛫" value={airport} onChange={setAirport} />
-        <AirportPicker label="Route: To / From (optional)" icon="📍" value={destination} onChange={setDestination} placeholder="Filter by specific route…" />
         <div className={styles.dateField}>
           <label className={styles.dateLabel}>Date</label>
           <div className={styles.dateWrap}>

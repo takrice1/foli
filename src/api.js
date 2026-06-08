@@ -1,12 +1,39 @@
 const BASE = '/api';
 
+// ── Client-side cache ────────────────────────────────────────────────────────
+// Cache API responses in sessionStorage for 60 minutes.  This prevents quota
+// exhaustion when the same airport+date is looked up multiple times and makes
+// repeat queries feel instant.
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+function cacheGet(key) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) { sessionStorage.removeItem(key); return null; }
+    return data;
+  } catch { return null; }
+}
+
+function cacheSet(key, data) {
+  try { sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); }
+  catch { /* storage full — silently skip */ }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function apiFetch(path) {
   const res = await fetch(`${BASE}${path}`, {
     headers: { 'Accept': 'application/json' },
   });
   if (!res.ok) {
+    if (res.status === 429) {
+      throw new Error(
+        'FlightAware rate limit reached — please wait a minute then try again.',
+      );
+    }
     const txt = await res.text();
-    throw new Error(`API ${res.status}: ${txt.slice(0, 400)}`);
+    throw new Error(`API ${res.status}: ${txt.slice(0, 200)}`);
   }
   return res.json();
 }
@@ -30,6 +57,10 @@ async function apiFetch(path) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function fetchDepartures(airportCode, dateStr) {
+  const key = `foli:dep:${airportCode}:${dateStr}`;
+  const hit = cacheGet(key);
+  if (hit) return hit;
+
   const [earlyRes, lateRes] = await Promise.all([
     apiFetch(`/airports/${airportCode}/flights/departures?${new URLSearchParams({
       start: `${dateStr}T00:00:00Z`,
@@ -44,10 +75,16 @@ export async function fetchDepartures(airportCode, dateStr) {
   ]);
   const early = earlyRes?.departures || [];
   const late  = lateRes?.scheduled_departures || lateRes?.departures || [];
-  return { departures: [...early, ...late] };
+  const result = { departures: [...early, ...late] };
+  cacheSet(key, result);
+  return result;
 }
 
 export async function fetchArrivals(airportCode, dateStr) {
+  const key = `foli:arr:${airportCode}:${dateStr}`;
+  const hit = cacheGet(key);
+  if (hit) return hit;
+
   const [earlyRes, lateRes] = await Promise.all([
     apiFetch(`/airports/${airportCode}/flights/arrivals?${new URLSearchParams({
       start: `${dateStr}T00:00:00Z`,
@@ -62,7 +99,9 @@ export async function fetchArrivals(airportCode, dateStr) {
   ]);
   const early = earlyRes?.arrivals || [];
   const late  = lateRes?.scheduled_arrivals || lateRes?.arrivals || [];
-  return { arrivals: [...early, ...late] };
+  const result = { arrivals: [...early, ...late] };
+  cacheSet(key, result);
+  return result;
 }
 
 function fmtTime(iso) {

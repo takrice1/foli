@@ -88,31 +88,36 @@ export function parseFlights(data) {
 
 export function toCard(f, direction, airportCode) {
   // AeroAPI field precedence (confirmed against live v4 responses):
-  //   *_out = gate pushback  (null for many cargo/regional flights)
-  //   *_off = wheels-off     (always present when a time is known)
-  //   *_in  = gate arrival   (null for many flights)
-  //   *_on  = wheels-on      (always present when a time is known)
-  const depISO = f.scheduled_out || f.scheduled_off
-               || f.estimated_out || f.estimated_off
-               || f.actual_out   || f.actual_off
-               || null;
-  const arrISO = f.scheduled_in  || f.scheduled_on
-               || f.estimated_in  || f.estimated_on
-               || f.actual_in    || f.actual_on
-               || null;
+  //   *_out = gate pushback  (can be from previous UTC day for early-morning flights)
+  //   *_off = wheels-off     (always within the queried time window)
+  //   *_in  = gate arrival
+  //   *_on  = wheels-on      (always within the queried time window)
+  //
+  // DISPLAY: prefer gate times (more meaningful to passengers)
+  const displayDep = f.scheduled_out  || f.estimated_out  || f.actual_out
+                   || f.scheduled_off || f.estimated_off  || f.actual_off  || null;
+  const displayArr = f.scheduled_in   || f.estimated_in   || f.actual_in
+                   || f.scheduled_on  || f.estimated_on   || f.actual_on   || null;
+  //
+  // SORT KEY: prefer wheels times (bounded to the queried day; avoids cross-midnight
+  // gate times pulling early-morning flights into the "previous day" sort position)
+  const rawDep = f.scheduled_off || f.actual_off  || f.estimated_off
+               || f.scheduled_out || f.actual_out || f.estimated_out || null;
+  const rawArr = f.scheduled_on  || f.actual_on   || f.estimated_on
+               || f.scheduled_in  || f.actual_in  || f.estimated_in  || null;
 
   return {
     flightNumber:  f.ident_iata || f.ident || f.flight_number || '—',
     airline:       f.operator_iata || f.operator || f.airline || '—',
     origin:        f.origin?.code_iata      || f.origin?.code      || (direction === 'dep' ? airportCode : '—'),
     destination:   f.destination?.code_iata || f.destination?.code || (direction === 'arr' ? airportCode : '—'),
-    departureTime: fmtTime(depISO),
-    arrivalTime:   fmtTime(arrISO),
-    duration:      calcDuration(depISO, arrISO),
+    departureTime: fmtTime(displayDep),
+    arrivalTime:   fmtTime(displayArr),
+    duration:      calcDuration(rawDep, rawArr),
     aircraft:      (f.aircraft_type || '').trim(),
     status:        f.status || 'Scheduled',
-    rawDep:        depISO,
-    rawArr:        arrISO,
+    rawDep,
+    rawArr,
     direction,
   };
 }

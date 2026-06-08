@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#0d0d12"/>
+
+  <!-- Red top rule -->
+  <rect x="72" y="88" width="368" height="14" rx="7" fill="#e63946"/>
+
+  <!-- Airplane fuselage -->
+  <ellipse cx="268" cy="252" rx="148" ry="34" fill="#f0f0f0"/>
+
+  <!-- Nose cone -->
+  <path d="M416 252 Q464 252 448 236 L436 218 Q472 240 472 252 Q472 264 436 286 L448 268 Q464 252 416 252Z" fill="#f0f0f0"/>
+
+  <!-- Tail end -->
+  <path d="M120 252 Q96 252 108 238 L118 224 Q102 240 104 252 Q102 264 118 280 L108 266 Q96 252 120 252Z" fill="#f0f0f0"/>
+
+  <!-- Main wings (top) -->
+  <path d="M248 252 L330 148 L366 148 L296 252Z" fill="#c8c8d8"/>
+
+  <!-- Main wings (bottom) -->
+  <path d="M248 252 L330 356 L366 356 L296 252Z" fill="#c8c8d8"/>
+
+  <!-- Tail fin (top) -->
+  <path d="M138 248 L162 204 L178 216 L160 252Z" fill="#c8c8d8"/>
+
+  <!-- Tail fin (bottom) -->
+  <path d="M138 256 L162 300 L178 288 L160 252Z" fill="#c8c8d8"/>
+
+  <!-- Window stripe -->
+  <rect x="160" y="244" width="210" height="16" rx="8" fill="#0d0d12" opacity="0.35"/>
+
+  <!-- Red runway / ground line -->
+  <rect x="72" y="390" width="368" height="14" rx="7" fill="#e63946"/>
+  <rect x="72" y="416" width="368" height="10" rx="5" fill="#e63946" opacity="0.35"/>
+
+  <!-- FOLI label — 4 rectangles forming "F" mark in bottom-right -->
+  <!-- vertical bar -->
+  <rect x="392" y="420" width="12" height="52" rx="4" fill="#e63946" opacity="0"/>
+</svg>

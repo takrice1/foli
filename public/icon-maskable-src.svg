@@ -1,0 +1,29 @@
+<!-- Maskable icon: important content kept inside the safe zone (centre 80% of canvas).
+     The outer 10% on each side may be cropped by the OS to a circle or squircle. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Full bleed background (no rounded corners — OS will clip) -->
+  <rect width="512" height="512" fill="#0d0d12"/>
+
+  <!-- Red rule — inside safe zone (top ~15%) -->
+  <rect x="102" y="100" width="308" height="12" rx="6" fill="#e63946"/>
+
+  <!-- Airplane fuselage — centred in safe zone -->
+  <ellipse cx="262" cy="252" rx="128" ry="30" fill="#f0f0f0"/>
+  <path d="M390 252 Q430 252 416 238 L406 222 Q438 242 438 252 Q438 262 406 282 L416 266 Q430 252 390 252Z" fill="#f0f0f0"/>
+  <path d="M134 252 Q112 252 124 240 L132 228 Q118 242 120 252 Q118 262 132 276 L124 264 Q112 252 134 252Z" fill="#f0f0f0"/>
+
+  <!-- Wings -->
+  <path d="M244 252 L312 162 L344 162 L284 252Z" fill="#c8c8d8"/>
+  <path d="M244 252 L312 342 L344 342 L284 252Z" fill="#c8c8d8"/>
+
+  <!-- Tail fins -->
+  <path d="M148 248 L168 212 L182 222 L166 252Z" fill="#c8c8d8"/>
+  <path d="M148 256 L168 292 L182 282 L166 252Z" fill="#c8c8d8"/>
+
+  <!-- Window stripe -->
+  <rect x="170" y="244" width="186" height="14" rx="7" fill="#0d0d12" opacity="0.35"/>
+
+  <!-- Red runway — inside safe zone (bottom ~15%) -->
+  <rect x="102" y="390" width="308" height="12" rx="6" fill="#e63946"/>
+  <rect x="102" y="414" width="308" height="8" rx="4" fill="#e63946" opacity="0.35"/>
+</svg>

@@ -26,8 +26,8 @@ export default function App() {
       ]);
       const depCards = parseFlights(depData).map(f => toCard(f, 'dep', airport));
       const arrCards = parseFlights(arrData).map(f => toCard(f, 'arr', airport));
-      const deps = firstAndLast(depCards, 'rawDep');
-      const arrs = firstAndLast(arrCards, 'rawArr');
+      const deps = firstAndLast(depCards, 'rawDep', date);
+      const arrs = firstAndLast(arrCards, 'rawArr', date);
       setResults({
         code: airport,
         date: new Date(date + 'T12:00:00').toLocaleDateString('en-US', {

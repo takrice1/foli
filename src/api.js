@@ -68,7 +68,11 @@ export async function fetchArrivals(airportCode, dateStr) {
 function fmtTime(iso) {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    // Always display in UTC so "first" always reads earlier than "last" regardless
+    // of the user's local timezone.  The "Z" suffix makes the timezone explicit.
+    return new Date(iso).toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC',
+    }) + 'Z';
   } catch { return '—'; }
 }
 
@@ -124,8 +128,12 @@ export function toCard(f, direction, airportCode) {
 
 // sortKey: 'rawDep' for departures (sort by gate-out/wheels-off),
 //          'rawArr' for arrivals (sort by gate-in/wheels-on)
-export function firstAndLast(cards, sortKey = 'rawDep') {
-  const valid = cards.filter(c => c[sortKey]);
+// dateStr: optional 'YYYY-MM-DD' — when provided, filters out any flight whose sort
+//          key falls on a different date (e.g. off-date flights the AeroAPI occasionally
+//          returns at the edges of a narrow query window).
+export function firstAndLast(cards, sortKey = 'rawDep', dateStr = null) {
+  let valid = cards.filter(c => c[sortKey]);
+  if (dateStr) valid = valid.filter(c => c[sortKey].startsWith(dateStr));
   if (!valid.length) return { first: null, last: null, count: 0 };
   const sorted = [...valid].sort((a, b) => new Date(a[sortKey]) - new Date(b[sortKey]));
   return { first: sorted[0], last: sorted[sorted.length - 1], count: sorted.length };

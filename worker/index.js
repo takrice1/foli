@@ -91,12 +91,18 @@ async function flightaware_flights(airportCode, dateStr, direction, apiKey) {
 
   const headers = { 'x-apikey': apiKey, 'Accept': 'application/json' };
 
+  // Future dates have no historical data — use the scheduled endpoint for both windows
+  const todayUTC = new Date().toISOString().slice(0, 10);
+  const isFuture = dateStr > todayUTC;
+  const earlyEp  = isFuture ? schEp : ep;
+  const earlyKey = isFuture ? schKey : resKey;
+
   const [earlyRes, lateRes] = await Promise.all([
     fetch(
-      `${FA_BASE}/airports/${airportCode}/flights/${ep}` +
+      `${FA_BASE}/airports/${airportCode}/flights/${earlyEp}` +
       `?start=${dateStr}T00:00:00Z&end=${dateStr}T09:00:00Z&max_pages=1`,
       { headers },
-    ).then(r => { if (!r.ok) throw new Error(`FA ${r.status}`); return r.json(); }),
+    ).then(r => r.ok ? r.json() : null).catch(() => null),
 
     fetch(
       `${FA_BASE}/airports/${airportCode}/flights/${schEp}` +
@@ -105,8 +111,8 @@ async function flightaware_flights(airportCode, dateStr, direction, apiKey) {
     ).then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
 
-  const early = earlyRes?.[resKey] || earlyRes?.flights || [];
-  const late  = lateRes?.[schKey]  || lateRes?.[resKey] || lateRes?.flights || [];
+  const early = earlyRes?.[earlyKey] || earlyRes?.[resKey] || earlyRes?.flights || [];
+  const late  = lateRes?.[schKey]    || lateRes?.[resKey]  || lateRes?.flights  || [];
   return normalizeFA([...early, ...late], direction, airportCode);
 }
 

@@ -25,14 +25,20 @@ export default function App() {
   function handleAirport(code, meta) { setAirport(code); setAirportMeta(meta || null); }
   function handleDest(code, meta)    { setDest(code);    setDestMeta(meta || null); }
 
-  async function search() {
+  function selectDate(str) {
+    setDate(str);
+    if (airport) search(str);
+  }
+
+  async function search(overrideDate) {
     if (!airport) return;
+    const searchDate = overrideDate ?? date;
     setLoading(true); setError(null); setResults(null);
 
     try {
       const [depData, arrData] = await Promise.all([
-        fetchDepartures(airport, date),
-        fetchArrivals(airport, date),
+        fetchDepartures(airport, searchDate),
+        fetchArrivals(airport, searchDate),
       ]);
 
       let depCards = parseFlights(depData).map(f => toCard(f, 'dep', airport));
@@ -45,8 +51,8 @@ export default function App() {
       }
 
       // Pass date so firstAndLast can filter out off-date edge-case flights
-      const deps   = firstAndLast(depCards, 'rawDep', date);
-      const arrs   = firstAndLast(arrCards, 'rawArr', date);
+      const deps   = firstAndLast(depCards, 'rawDep', searchDate);
+      const arrs   = firstAndLast(arrCards, 'rawArr', searchDate);
       const depSrc = getSource(depData);
       const arrSrc = getSource(arrData);
 
@@ -58,7 +64,8 @@ export default function App() {
         code:        airport,
         displayName,
         fullName:    airportMeta?.name || '',
-        date: new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
+        dateStr:     searchDate,
+        date: new Date(searchDate + 'T12:00:00').toLocaleDateString('en-US', {
           weekday: 'short', month: 'long', day: 'numeric', year: 'numeric',
         }),
         deps, arrs,
@@ -103,14 +110,24 @@ export default function App() {
         />
         <div className={styles.dateField}>
           <label className={styles.dateLabel}>Date</label>
-          <div className={styles.dateWrap}>
-            <span className={styles.dateIcon}>📅</span>
-            <input
-              type="date"
-              className={styles.dateInp}
-              value={date}
-              onChange={e => setDate(e.target.value)}
-            />
+          <div className={styles.dateTabs}>
+            {[0, 1, 2].map(offset => {
+              const d = new Date();
+              d.setDate(d.getDate() + offset);
+              const str  = d.toISOString().slice(0, 10);
+              const day  = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+              const lbl  = offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' : '+2 Days';
+              return (
+                <button
+                  key={offset}
+                  className={`${styles.dateTab} ${date === str ? styles.dateTabActive : ''}`}
+                  onClick={() => selectDate(str)}
+                >
+                  <span className={styles.dateTabLabel}>{lbl}</span>
+                  <span className={styles.dateTabDay}>{day}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
         <button

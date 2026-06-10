@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import AirportPicker from './components/AirportPicker.jsx';
 import FlightCard from './components/FlightCard.jsx';
+import LoginScreen from './components/LoginScreen.jsx';
 import {
   fetchDepartures, fetchArrivals,
   parseFlights, getSource, toCard, firstAndLast,
 } from './api.js';
+import { isLoggedIn, getEmail, logout } from './auth.js';
 import styles from './App.module.css';
 
 function todayStr() {
@@ -12,6 +14,7 @@ function todayStr() {
 }
 
 export default function App() {
+  const [authed, setAuthed]           = useState(isLoggedIn());
   const [airport, setAirport]         = useState('');
   const [airportMeta, setAirportMeta] = useState(null);
   const [destination, setDest]        = useState('');
@@ -73,14 +76,26 @@ export default function App() {
         arrSource: arrSrc,
       });
     } catch (e) {
+      if (e.authExpired) { setAuthed(false); return; }
       setError(e.message || 'Failed to fetch flight data.');
     } finally {
       setLoading(false);
     }
   }
 
+  function handleLogout() {
+    logout();
+    setAuthed(false);
+    setResults(null);
+    setError(null);
+  }
+
   const depsDiffer = results?.deps.first?.flightNumber !== results?.deps.last?.flightNumber;
   const arrsDiffer = results?.arrs.first?.flightNumber !== results?.arrs.last?.flightNumber;
+
+  if (!authed) {
+    return <LoginScreen onAuthed={() => setAuthed(true)} />;
+  }
 
   return (
     <div className={styles.app}>
@@ -90,6 +105,10 @@ export default function App() {
         <div className={styles.wordmark}>
           <span className={styles.foliLogo}>FOLI</span>
           <span className={styles.foliTag}>First Out · Last In</span>
+          <span className={styles.account}>
+            <span className={styles.accountEmail}>{getEmail()}</span>
+            <button className={styles.logoutBtn} onClick={handleLogout}>Log out</button>
+          </span>
         </div>
         <p className={styles.subtitle}>
           First &amp; last flights at any airport worldwide —<br />

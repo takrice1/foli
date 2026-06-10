@@ -37,8 +37,8 @@ function corsHeaders(origin) {
   const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin':  allowed,
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Accept',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization',
     'Access-Control-Max-Age':       '86400',
   };
 }
@@ -71,6 +71,107 @@ function cacheSet(key, data, ttl) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function isNonEmpty(arr) { return Array.isArray(arr) && arr.length > 0; }
+
+// ── Auth (paywall) ────────────────────────────────────────────────────────────
+//
+// Accounts live in the USERS KV namespace:  user:<email> →
+//   { passHash, salt, plan, createdAt }
+// Passwords are hashed with PBKDF2-SHA256 (100k iterations, per-user salt).
+// Sessions are HS256 JWTs signed with the AUTH_SECRET worker secret, 30-day
+// expiry. The flight endpoints require a valid Bearer token; airport search
+// stays public so the picker works on the login screen if ever needed.
+//
+// `plan` is 'free' for now — Stripe checkout will upgrade it to 'pro' later.
+
+const TOKEN_TTL_S   = 30 * 24 * 60 * 60; // 30 days
+const PBKDF2_ITERS  = 100_000;
+
+const enc = new TextEncoder();
+
+function toHex(buf) {
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function b64url(data) {
+  const str = typeof data === 'string' ? data : String.fromCharCode(...new Uint8Array(data));
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64urlDecode(str) {
+  return atob(str.replace(/-/g, '+').replace(/_/g, '/'));
+}
+
+async function hashPassword(password, saltHex) {
+  const salt = saltHex
+    ? new Uint8Array(saltHex.match(/../g).map(h => parseInt(h, 16)))
+    : crypto.getRandomValues(new Uint8Array(16));
+  const key  = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PBKDF2_ITERS },
+    key, 256,
+  );
+  return { hash: toHex(bits), salt: toHex(salt) };
+}
+
+async function hmacKey(secret) {
+  return crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+
+async function signToken(email, plan, secret) {
+  const header  = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = b64url(JSON.stringify({ sub: email, plan, exp: Math.floor(Date.now() / 1000) + TOKEN_TTL_S }));
+  const sig     = await crypto.subtle.sign('HMAC', await hmacKey(secret), enc.encode(`${header}.${payload}`));
+  return `${header}.${payload}.${b64url(sig)}`;
+}
+
+async function verifyToken(token, secret) {
+  try {
+    const [header, payload, sig] = token.split('.');
+    if (!header || !payload || !sig) return null;
+    const sigBytes = Uint8Array.from(b64urlDecode(sig), c => c.charCodeAt(0));
+    const ok = await crypto.subtle.verify('HMAC', await hmacKey(secret), sigBytes, enc.encode(`${header}.${payload}`));
+    if (!ok) return null;
+    const claims = JSON.parse(b64urlDecode(payload));
+    if (claims.exp < Math.floor(Date.now() / 1000)) return null;
+    return claims;
+  } catch { return null; }
+}
+
+async function requireAuth(request, env) {
+  if (!env.AUTH_SECRET) return { sub: 'anonymous', plan: 'free' }; // auth not configured — fail open
+  const auth = request.headers.get('Authorization') || '';
+  if (!auth.startsWith('Bearer ')) return null;
+  return verifyToken(auth.slice(7), env.AUTH_SECRET);
+}
+
+const VALID_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+async function handleSignup(request, env, cors) {
+  const { email, password } = await request.json().catch(() => ({}));
+  const em = (email || '').trim().toLowerCase();
+  if (!VALID_EMAIL.test(em))                return jsonResponse({ error: 'Enter a valid email address.' }, 400, cors);
+  if (!password || password.length < 8)     return jsonResponse({ error: 'Password must be at least 8 characters.' }, 400, cors);
+  if (await env.USERS.get(`user:${em}`))    return jsonResponse({ error: 'An account with that email already exists — log in instead.' }, 409, cors);
+
+  const { hash, salt } = await hashPassword(password);
+  const user = { passHash: hash, salt, plan: 'free', createdAt: new Date().toISOString() };
+  await env.USERS.put(`user:${em}`, JSON.stringify(user));
+
+  const token = await signToken(em, user.plan, env.AUTH_SECRET);
+  return jsonResponse({ token, email: em, plan: user.plan }, 201, cors);
+}
+
+async function handleLogin(request, env, cors) {
+  const { email, password } = await request.json().catch(() => ({}));
+  const em  = (email || '').trim().toLowerCase();
+  const raw = em ? await env.USERS.get(`user:${em}`) : null;
+  if (!raw) return jsonResponse({ error: 'Incorrect email or password.' }, 401, cors);
+
+  const user = JSON.parse(raw);
+  const { hash } = await hashPassword(password || '', user.salt);
+  if (hash !== user.passHash) return jsonResponse({ error: 'Incorrect email or password.' }, 401, cors);
+
+  const token = await signToken(em, user.plan, env.AUTH_SECRET);
+  return jsonResponse({ token, email: em, plan: user.plan }, 200, cors);
+}
 
 // ── Provider 1: FlightAware ───────────────────────────────────────────────────
 //
@@ -356,11 +457,27 @@ export default {
     const cors   = corsHeaders(origin);
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-    if (request.method !== 'GET')     return new Response('Method not allowed', { status: 405, headers: cors });
 
     const url  = new URL(request.url);
     const path = url.pathname;
     if (!path.startsWith('/api/')) return new Response('Not found', { status: 404, headers: cors });
+
+    // ── Auth  POST /api/auth/signup | /api/auth/login,  GET /api/auth/me
+    if (path === '/api/auth/signup' && request.method === 'POST') {
+      try { return await handleSignup(request, env, cors); }
+      catch (e) { return jsonResponse({ error: e.message }, 500, cors); }
+    }
+    if (path === '/api/auth/login' && request.method === 'POST') {
+      try { return await handleLogin(request, env, cors); }
+      catch (e) { return jsonResponse({ error: e.message }, 500, cors); }
+    }
+    if (path === '/api/auth/me' && request.method === 'GET') {
+      const claims = await requireAuth(request, env);
+      if (!claims) return jsonResponse({ error: 'Not signed in' }, 401, cors);
+      return jsonResponse({ email: claims.sub, plan: claims.plan }, 200, cors);
+    }
+
+    if (request.method !== 'GET') return new Response('Method not allowed', { status: 405, headers: cors });
 
     // ── Airport search  GET /api/airports?query=XXX
     if (path === '/api/airports' && url.searchParams.has('query')) {
@@ -371,6 +488,13 @@ export default {
       } catch (e) {
         return jsonResponse({ airports: [], source: 'error', error: e.message }, 500, cors);
       }
+    }
+
+    // ── Flight endpoints are behind the paywall — require a valid session token
+    const isFlightPath = /^\/api\/airports\/[^/]+\/flights\//.test(path);
+    if (isFlightPath) {
+      const claims = await requireAuth(request, env);
+      if (!claims) return jsonResponse({ error: 'auth_required' }, 401, cors);
     }
 
     // ── Departures  GET /api/airports/:code/flights/departures?start=...

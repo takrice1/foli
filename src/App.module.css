@@ -31,6 +31,11 @@
   padding-bottom: 4px;
 }
 
+.account { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; padding-bottom: 4px; }
+.accountEmail { font-family: var(--mono); font-size: 9px; color: var(--muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logoutBtn { font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 10px; padding: 3px 10px; cursor: pointer; transition: all 0.15s; }
+.logoutBtn:hover { color: var(--ink); border-color: var(--ink); }
+
 .subtitle {
   font-family: var(--mono);
   font-size: 11px;

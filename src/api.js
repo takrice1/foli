@@ -1,4 +1,5 @@
 import { airlineName } from './airlines.js';
+import { getToken, logout } from './auth.js';
 
 const BASE = '/api';
 
@@ -25,8 +26,18 @@ function cacheSet(key, data) {
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
 async function apiFetch(path) {
-  const res = await fetch(`${BASE}${path}`, { headers: { 'Accept': 'application/json' } });
+  const headers = { 'Accept': 'application/json' };
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${path}`, { headers });
   if (!res.ok) {
+    if (res.status === 401) {
+      logout();
+      const err = new Error('Your session has expired — please log in again.');
+      err.authExpired = true;
+      throw err;
+    }
     if (res.status === 429) {
       throw new Error('FlightAware rate limit reached — please wait a minute then try again.');
     }

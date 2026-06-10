@@ -2,9 +2,18 @@ name               = "foli-proxy"
 main               = "index.js"
 compatibility_date = "2024-01-01"
 
-# Deploy:  npx wrangler deploy
-# Set key: npx wrangler secret put FA_API_KEY
-# Never put your API key in this file.
+# Deploy: npx wrangler deploy
+#
+# Secrets — set each via CLI, NEVER put keys in this file:
+#   npx wrangler secret put FA_API_KEY
+#   npx wrangler secret put AIRLABS_KEY
+#   npx wrangler secret put AVIATIONSTACK_KEY
+#   npx wrangler secret put AUTH_SECRET
+#
+# Free API key signups:
+#   FlightAware   → flightaware.com/commercial/aeroapi/
+#   AirLabs       → airlabs.co  (1,000 free calls/month)
+#   AviationStack → aviationstack.com  (500 free calls/month)
 
 # User accounts for the paywall (email → { passHash, salt, plan, createdAt })
 [[kv_namespaces]]

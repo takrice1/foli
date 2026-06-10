@@ -51,10 +51,14 @@
 
 .dateField { margin-bottom: 14px; }
 .dateLabel { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; display: block; }
-.dateWrap { position: relative; }
-.dateIcon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 18px; pointer-events: none; }
-.dateInp { width: 100%; padding: 13px 16px 13px 46px; border: 2px solid var(--border); border-radius: var(--radius); font-family: var(--sans); font-size: 15px; font-weight: 600; background: var(--card); color: var(--ink); outline: none; transition: border-color 0.18s; cursor: pointer; -webkit-appearance: none; }
-.dateInp:focus { border-color: var(--ink); }
+
+.dateTabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dateTab { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 11px 8px; border: 2px solid var(--border); border-radius: var(--radius); background: var(--card); cursor: pointer; transition: all 0.15s; }
+.dateTab:hover { border-color: var(--ink); }
+.dateTabActive { background: var(--ink); border-color: var(--ink); }
+.dateTabLabel { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: var(--muted); }
+.dateTabDay { font-family: var(--sans); font-size: 11px; color: var(--muted); }
+.dateTabActive .dateTabLabel, .dateTabActive .dateTabDay { color: var(--paper); }
 
 .goBtn { width: 100%; padding: 16px; background: var(--ink); color: var(--paper); border: none; border-radius: var(--radius); font-family: var(--mono); font-size: 14px; font-weight: 500; letter-spacing: 0.08em; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 3px 3px 0 var(--accent); margin-top: 4px; }
 .goBtn:hover:not(:disabled) { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--accent); }
@@ -96,6 +100,14 @@
 .sectionLabel { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 .sectionLabel::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 .empty { font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: center; padding: 28px 20px; line-height: 1.8; }
+
+/* ── Result header extras ── */
+.apCity { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+.apFullName { font-family: var(--mono); font-size: 10px; color: var(--muted); margin: -12px 0 14px; padding-left: 2px; }
+
+/* ── Source badges ── */
+.sourceBadges { display: flex; align-items: center; gap: 4px; margin: 10px 0 18px; flex-wrap: wrap; }
+.sourceLabel { font-family: var(--mono); font-size: 10px; color: var(--green); margin-right: 4px; }
 
 /* ── Footer ── */
 .footer { margin-top: auto; padding: 32px 20px 24px; display: flex; flex-direction: column; align-items: center; gap: 6px; border-top: 1px solid var(--border); }

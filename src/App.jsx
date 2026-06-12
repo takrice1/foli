@@ -25,11 +25,26 @@ export default function App() {
   const [results, setResults]         = useState(null);
   const [error, setError]             = useState(null);
 
-  function handleAirport(code, meta) { setAirport(code); setAirportMeta(meta || null); }
-  function handleDest(code, meta)    { setDest(code);    setDestMeta(meta || null); }
+  // Reset results whenever airport, destination, or date changes so a stale
+  // lookup is never shown alongside new search inputs
+  function handleAirport(code, meta) {
+    setAirport(code);
+    setAirportMeta(meta || null);
+    setResults(null);
+    setError(null);
+  }
+
+  function handleDest(code, meta) {
+    setDest(code);
+    setDestMeta(meta || null);
+    setResults(null);
+    setError(null);
+  }
 
   function selectDate(str) {
     setDate(str);
+    setResults(null);
+    setError(null);
     if (airport) search(str);
   }
 

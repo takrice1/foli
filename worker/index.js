@@ -376,11 +376,11 @@ async function handleReset(request, env, cors) {
 }
 
 // ── Contact form ──────────────────────────────────────────────────────────────
-// POST /api/contact {name?, email, message} → emails riceteckinc@gmail.com
+// POST /api/contact {name?, email, message} → emails ricetekinc@gmail.com
 // from CustomerService@flyfoli.com with reply-to set to the visitor, so a
 // normal reply in Gmail goes straight back to them.
 
-const CONTACT_TO   = 'riceteckinc@gmail.com';
+const CONTACT_TO   = 'ricetekinc@gmail.com';
 const CONTACT_FROM = 'FOLI Customer Service <CustomerService@flyfoli.com>';
 
 function escapeHtml(s) {

@@ -40,6 +40,7 @@ npx wrangler secret put FA_API_KEY          # flightaware.com/commercial/aeroapi
 npx wrangler secret put AIRLABS_KEY         # airlabs.co        (1,000 free calls/mo)
 npx wrangler secret put AVIATIONSTACK_KEY   # aviationstack.com (500 free calls/mo)
 npx wrangler secret put AUTH_SECRET         # random 32+ bytes — signs session JWTs
+npx wrangler secret put RESEND_KEY          # resend.com — sends password-reset emails
 ```
 
 ## Architecture

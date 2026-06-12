@@ -32,6 +32,12 @@
 .input:focus { border-color: var(--ink); }
 
 .error { font-family: var(--mono); font-size: 11px; color: #c0392b; line-height: 1.6; margin: -4px 0 12px; }
+.notice { font-family: var(--mono); font-size: 11px; color: var(--green, #2d6a4f); line-height: 1.6; margin: -4px 0 12px; }
+
+.subhead { font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); margin-bottom: 20px; }
+
+.linkBtn { display: block; margin: 14px auto 0; background: none; border: none; font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: underline; cursor: pointer; padding: 4px; }
+.linkBtn:hover { color: var(--ink); }
 
 .submit { width: 100%; padding: 16px; background: var(--ink); color: var(--paper); border: none; border-radius: var(--radius); font-family: var(--mono); font-size: 14px; font-weight: 500; letter-spacing: 0.08em; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 3px 3px 0 var(--accent); margin-top: 4px; }
 .submit:hover:not(:disabled) { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--accent); }

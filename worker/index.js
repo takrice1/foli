@@ -281,6 +281,100 @@ async function handleLogin(request, env, cors) {
   return jsonResponse({ token, email: em, plan: user.plan }, 200, cors);
 }
 
+// ── Password reset ────────────────────────────────────────────────────────────
+// /auth/forgot stores a one-hour single-use token in KV (hashed, so a KV leak
+// can't be replayed) and emails the user a link back to flyfoli.com.
+// /auth/reset consumes the token, rehashes the new password, and logs them in.
+// Email goes out via Resend (RESEND_KEY secret; resend.com, free tier).
+
+const RESET_TTL_S = 60 * 60; // 1 hour
+
+async function sha256Hex(s) {
+  return toHex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+}
+
+async function sendResetEmail(email, link, env) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${env.RESEND_KEY}`,
+      'Content-Type':  'application/json',
+    },
+    body: JSON.stringify({
+      from:    'FOLI <noreply@flyfoli.com>',
+      to:      [email],
+      subject: 'Reset your FOLI password',
+      html: `
+        <div style="font-family:monospace;max-width:480px;margin:0 auto;padding:24px">
+          <h2 style="letter-spacing:0.12em">FOLI</h2>
+          <p>Someone requested a password reset for this email address.</p>
+          <p><a href="${link}" style="display:inline-block;background:#0d0d12;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">Reset my password</a></p>
+          <p style="color:#888;font-size:12px">This link expires in 1 hour. If you didn't request it, you can safely ignore this email — your password is unchanged.</p>
+        </div>`,
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`Email send failed (${res.status}): ${txt.slice(0, 120)}`);
+  }
+}
+
+async function handleForgot(request, env, cors) {
+  if (!env.RESEND_KEY) {
+    return jsonResponse({ error: 'Password reset is not available yet — please contact support.' }, 503, cors);
+  }
+  const { email } = await request.json().catch(() => ({}));
+  const em = (email || '').trim().toLowerCase();
+
+  // Always answer the same way so this endpoint can't probe which emails exist
+  const ok = jsonResponse({
+    ok: true,
+    message: 'If an account exists for that email, a reset link is on its way.',
+  }, 200, cors);
+
+  if (!VALID_EMAIL.test(em)) return ok;
+  if (!await env.USERS.get(`user:${em}`)) return ok;
+
+  const token = toHex(crypto.getRandomValues(new Uint8Array(32)));
+  await env.USERS.put(
+    `reset:${await sha256Hex(token)}`,
+    JSON.stringify({ email: em }),
+    { expirationTtl: RESET_TTL_S },
+  );
+  await sendResetEmail(em, `https://flyfoli.com/?reset=${token}`, env);
+  return ok;
+}
+
+async function handleReset(request, env, cors) {
+  const { token, password } = await request.json().catch(() => ({}));
+  if (!token || typeof token !== 'string') {
+    return jsonResponse({ error: 'Invalid reset link.' }, 400, cors);
+  }
+  if (!password || password.length < 8) {
+    return jsonResponse({ error: 'Password must be at least 8 characters.' }, 400, cors);
+  }
+
+  const rk  = `reset:${await sha256Hex(token)}`;
+  const rec = await env.USERS.get(rk);
+  if (!rec) {
+    return jsonResponse({ error: 'This reset link is invalid or has expired — request a new one.' }, 400, cors);
+  }
+
+  const { email } = JSON.parse(rec);
+  const raw = await env.USERS.get(`user:${email}`);
+  if (!raw) return jsonResponse({ error: 'Account no longer exists.' }, 400, cors);
+
+  const user = JSON.parse(raw);
+  const { hash, salt } = await hashPassword(password);
+  user.passHash = hash;
+  user.salt     = salt;
+  await env.USERS.put(`user:${email}`, JSON.stringify(user));
+  await env.USERS.delete(rk); // single use
+
+  const session = await signToken(email, user.plan, env.AUTH_SECRET);
+  return jsonResponse({ token: session, email, plan: user.plan }, 200, cors);
+}
+
 // ── Provider 1: FlightAware ───────────────────────────────────────────────────
 //
 // Split-day strategy: the /departures|arrivals endpoint anchors results to the
@@ -593,6 +687,14 @@ export default {
     }
     if (path === '/api/auth/login' && request.method === 'POST') {
       try { return await handleLogin(request, env, cors); }
+      catch (e) { return jsonResponse({ error: e.message }, 500, cors); }
+    }
+    if (path === '/api/auth/forgot' && request.method === 'POST') {
+      try { return await handleForgot(request, env, cors); }
+      catch (e) { return jsonResponse({ error: e.message }, 500, cors); }
+    }
+    if (path === '/api/auth/reset' && request.method === 'POST') {
+      try { return await handleReset(request, env, cors); }
       catch (e) { return jsonResponse({ error: e.message }, 500, cors); }
     }
     if (path === '/api/auth/me' && request.method === 'GET') {

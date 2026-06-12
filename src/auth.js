@@ -51,3 +51,13 @@ export async function login(email, password) {
   storeSession(session);
   return session;
 }
+
+export async function forgotPassword(email) {
+  return authPost('/auth/forgot', { email });
+}
+
+export async function resetPassword(token, password) {
+  const session = await authPost('/auth/reset', { token, password });
+  storeSession(session);
+  return session;
+}

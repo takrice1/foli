@@ -150,12 +150,12 @@ export default function App() {
         <div className={styles.dateField}>
           <label className={styles.dateLabel}>Date</label>
           <div className={styles.dateTabs}>
-            {[0, 1, 2].map(offset => {
+            {[0, 1].map(offset => {
               const d = new Date();
               d.setDate(d.getDate() + offset);
               const str  = d.toISOString().slice(0, 10);
               const day  = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-              const lbl  = offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' : '+2 Days';
+              const lbl  = offset === 0 ? 'Today' : 'Tomorrow';
               return (
                 <button
                   key={offset}

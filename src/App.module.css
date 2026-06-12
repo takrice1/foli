@@ -57,7 +57,7 @@
 .dateField { margin-bottom: 14px; }
 .dateLabel { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; display: block; }
 
-.dateTabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dateTabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .dateTab { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 11px 8px; border: 2px solid var(--border); border-radius: var(--radius); background: var(--card); cursor: pointer; transition: all 0.15s; }
 .dateTab:hover { border-color: var(--ink); }
 .dateTabActive { background: var(--ink); border-color: var(--ink); }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { login, signup, forgotPassword, resetPassword } from '../auth.js';
+import ContactUs from './ContactUs.jsx';
 import styles from './LoginScreen.module.css';
 
 // A reset link from the email lands on flyfoli.com/?reset=<token>
@@ -161,6 +162,10 @@ export default function LoginScreen({ onAuthed }) {
             Pro plans with route alerts are coming soon.
           </p>
         )}
+      </div>
+
+      <div className={styles.contact}>
+        <ContactUs />
       </div>
 
       <div className={styles.runway} />

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import AirportPicker from './components/AirportPicker.jsx';
 import FlightCard from './components/FlightCard.jsx';
 import LoginScreen from './components/LoginScreen.jsx';
+import ContactUs from './components/ContactUs.jsx';
 import {
   fetchDepartures, fetchArrivals,
   parseFlights, getSource, getOriginTz, toCard, firstAndLast,
@@ -267,6 +268,7 @@ export default function App() {
       <footer className={styles.footer}>
         <span className={styles.footerLogo}>FOLI</span>
         <span className={styles.footerTag}>First Out · Last In · Powered by FlightAware, AirLabs &amp; AviationStack</span>
+        <ContactUs />
       </footer>
 
     </div>

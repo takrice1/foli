@@ -46,4 +46,6 @@
 
 .fine { font-family: var(--mono); font-size: 10px; color: var(--muted); line-height: 1.7; margin-top: 16px; text-align: center; }
 
+.contact { margin-top: 20px; display: flex; justify-content: center; }
+
 .runway { margin-top: 32px; height: 3px; background: repeating-linear-gradient(90deg, var(--ink) 0 20px, transparent 20px 32px); opacity: 0.1; border-radius: 2px; }

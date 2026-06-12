@@ -1,0 +1,20 @@
+.wrap { width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; }
+
+.link { background: none; border: none; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--muted); text-decoration: underline; cursor: pointer; padding: 6px; }
+.link:hover { color: var(--ink); }
+
+.form { width: 100%; margin-top: 10px; background: var(--card); border: 2px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 10px; text-align: left; }
+
+.heading { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); line-height: 1.6; }
+
+.input, .textarea { width: 100%; padding: 11px 14px; border: 2px solid var(--border); border-radius: var(--radius); font-family: var(--sans); font-size: 14px; font-weight: 600; background: var(--paper); color: var(--ink); outline: none; transition: border-color 0.18s; }
+.input:focus, .textarea:focus { border-color: var(--ink); }
+.textarea { resize: vertical; min-height: 80px; font-weight: 500; }
+
+.error  { font-family: var(--mono); font-size: 11px; color: #c0392b; line-height: 1.6; margin: 0; }
+.notice { font-family: var(--mono); font-size: 11px; color: var(--green, #2d6a4f); line-height: 1.6; margin: 0; }
+
+.send { width: 100%; padding: 12px; background: var(--ink); color: var(--paper); border: none; border-radius: var(--radius); font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: 0.08em; cursor: pointer; box-shadow: 3px 3px 0 var(--accent); transition: transform 0.15s, box-shadow 0.15s; }
+.send:hover:not(:disabled) { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--accent); }
+.send:active:not(:disabled) { transform: translate(1px,1px); box-shadow: 1px 1px 0 var(--accent); }
+.send:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }

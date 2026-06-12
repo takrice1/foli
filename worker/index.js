@@ -375,6 +375,61 @@ async function handleReset(request, env, cors) {
   return jsonResponse({ token: session, email, plan: user.plan }, 200, cors);
 }
 
+// ── Contact form ──────────────────────────────────────────────────────────────
+// POST /api/contact {name?, email, message} → emails riceteckinc@gmail.com
+// from CustomerService@flyfoli.com with reply-to set to the visitor, so a
+// normal reply in Gmail goes straight back to them.
+
+const CONTACT_TO   = 'riceteckinc@gmail.com';
+const CONTACT_FROM = 'FOLI Customer Service <CustomerService@flyfoli.com>';
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/\n/g, '<br>');
+}
+
+async function handleContact(request, env, cors) {
+  if (!env.RESEND_KEY) {
+    return jsonResponse({ error: 'The contact form is not available right now — email CustomerService@flyfoli.com instead.' }, 503, cors);
+  }
+  const { name, email, message } = await request.json().catch(() => ({}));
+  const em  = (email || '').trim().toLowerCase();
+  const msg = (message || '').trim();
+  const nm  = (name || '').trim().slice(0, 100);
+
+  if (!VALID_EMAIL.test(em))  return jsonResponse({ error: 'Enter a valid email address so we can reply.' }, 400, cors);
+  if (msg.length < 5)         return jsonResponse({ error: 'Message is too short.' }, 400, cors);
+  if (msg.length > 5000)      return jsonResponse({ error: 'Message is too long (5,000 characters max).' }, 400, cors);
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${env.RESEND_KEY}`,
+      'Content-Type':  'application/json',
+    },
+    body: JSON.stringify({
+      from:     CONTACT_FROM,
+      to:       [CONTACT_TO],
+      reply_to: em,
+      subject:  `FOLI Contact — ${nm || em}`,
+      html: `
+        <div style="font-family:monospace;max-width:560px;margin:0 auto;padding:24px">
+          <h3 style="letter-spacing:0.12em">FOLI — Contact form</h3>
+          <p><strong>From:</strong> ${escapeHtml(nm || '(no name)')} &lt;${escapeHtml(em)}&gt;</p>
+          <hr style="border:none;border-top:1px solid #ddd">
+          <p>${escapeHtml(msg)}</p>
+          <hr style="border:none;border-top:1px solid #ddd">
+          <p style="color:#888;font-size:12px">Reply to this email to answer the sender directly.</p>
+        </div>`,
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    return jsonResponse({ error: `Could not send your message (${res.status}). Please try again or email CustomerService@flyfoli.com.`, detail: txt.slice(0, 120) }, 502, cors);
+  }
+  return jsonResponse({ ok: true, message: `Thanks — your message is on its way. We'll reply to ${em}.` }, 200, cors);
+}
+
 // ── Provider 1: FlightAware ───────────────────────────────────────────────────
 //
 // Split-day strategy: the /departures|arrivals endpoint anchors results to the
@@ -695,6 +750,10 @@ export default {
     }
     if (path === '/api/auth/reset' && request.method === 'POST') {
       try { return await handleReset(request, env, cors); }
+      catch (e) { return jsonResponse({ error: e.message }, 500, cors); }
+    }
+    if (path === '/api/contact' && request.method === 'POST') {
+      try { return await handleContact(request, env, cors); }
       catch (e) { return jsonResponse({ error: e.message }, 500, cors); }
     }
     if (path === '/api/auth/me' && request.method === 'GET') {

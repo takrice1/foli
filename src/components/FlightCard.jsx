@@ -1,18 +1,29 @@
+import { fmtLocalTime, tzAbbr } from '../api.js';
 import styles from './FlightCard.module.css';
 
 function statusClass(s) {
   if (!s) return 'unknown';
   const l = s.toLowerCase();
   if (l.includes('cancel')) return 'cancelled';
-  if (l.includes('active') || l.includes('en route')) return 'active';
-  if (l.includes('land') || l.includes('arrived')) return 'landed';
+  if (l.includes('active') || l.includes('route')) return 'active';
+  if (l.includes('land') || l.includes('arriv')) return 'landed';
   if (l.includes('sched')) return 'scheduled';
   return 'unknown';
 }
 
-export default function FlightCard({ flight, rank }) {
+export default function FlightCard({ flight, rank, airportTz }) {
   const isFirst = rank === 'first';
   const sc = statusClass(flight.status);
+
+  // Per-flight timezone if the provider sent one, else the queried airport's
+  const depTz = flight.depTz || (flight.direction === 'dep' ? airportTz : null);
+  const arrTz = flight.arrTz || (flight.direction === 'arr' ? airportTz : null);
+
+  const depTime  = fmtLocalTime(flight.dispDep, depTz);
+  const arrTime  = fmtLocalTime(flight.dispArr, arrTz);
+  const depLabel = tzAbbr(flight.dispDep, depTz);
+  const arrLabel = tzAbbr(flight.dispArr, arrTz);
+
   return (
     <div className={`${styles.card} ${isFirst ? styles.isFirst : styles.isLast}`}>
       <div className={styles.top}>
@@ -28,8 +39,11 @@ export default function FlightCard({ flight, rank }) {
       </div>
       <div className={styles.times}>
         <div className={styles.timeCol}>
-          <div className={styles.time}>{flight.departureTime}</div>
-          <div className={styles.timeLabel}>Departs</div>
+          <div className={styles.time}>{depTime}</div>
+          <div className={styles.timeLabel}>
+            Departs
+            {depLabel && <span className={styles.tzPill}>{depLabel}</span>}
+          </div>
         </div>
         <div className={styles.mid}>
           <div className={styles.duration}>{flight.duration}</div>
@@ -37,8 +51,11 @@ export default function FlightCard({ flight, rank }) {
           <div className={styles.flightNum}>{flight.flightNumber}</div>
         </div>
         <div className={`${styles.timeCol} ${styles.right}`}>
-          <div className={styles.time}>{flight.arrivalTime}</div>
-          <div className={styles.timeLabel}>Arrives</div>
+          <div className={styles.time}>{arrTime}</div>
+          <div className={styles.timeLabel}>
+            Arrives
+            {arrLabel && <span className={styles.tzPill}>{arrLabel}</span>}
+          </div>
         </div>
       </div>
       <div className={styles.foot}>

@@ -54,8 +54,9 @@ function jsonResponse(data, status, cors) {
 
 const CACHE     = new Map();
 const CACHE_TTL = {
-  airports: 60 * 60 * 1000,  // 1 hour  — airport metadata rarely changes
-  flights:   5 * 60 * 1000,  // 5 mins  — flight data is time-sensitive
+  airports: 60 * 60 * 1000,       // 1 hour  — airport metadata rarely changes
+  flights:   5 * 60 * 1000,       // 5 mins  — flight data is time-sensitive
+  tz:       24 * 60 * 60 * 1000,  // 24 hrs  — airport timezones never change
 };
 
 function cacheGet(key) {
@@ -71,6 +72,113 @@ function cacheSet(key, data, ttl) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function isNonEmpty(arr) { return Array.isArray(arr) && arr.length > 0; }
+
+// ── Timezone lookup ───────────────────────────────────────────────────────────
+// Inline IATA→IANA map for the most common airports so the happy path needs no
+// extra API call. Unknown airports fall back to FlightAware's /airports/{id}
+// endpoint, cached for 24h.
+
+const TZ_MAP = {
+  // US
+  ATL:'America/New_York', BOS:'America/New_York', BWI:'America/New_York',
+  CLT:'America/New_York', DCA:'America/New_York', EWR:'America/New_York',
+  IAD:'America/New_York', JFK:'America/New_York', LGA:'America/New_York',
+  MIA:'America/New_York', MCO:'America/New_York', PHL:'America/New_York',
+  PBI:'America/New_York', RDU:'America/New_York', RIC:'America/New_York',
+  FLL:'America/New_York', TPA:'America/New_York', RSW:'America/New_York',
+  JAX:'America/New_York', SAV:'America/New_York', CHS:'America/New_York',
+  PIT:'America/New_York', CLE:'America/New_York', CMH:'America/New_York',
+  CVG:'America/New_York', IND:'America/New_York', DTW:'America/New_York',
+  BUF:'America/New_York', ROC:'America/New_York', SYR:'America/New_York',
+  ALB:'America/New_York', BDL:'America/New_York', PVD:'America/New_York',
+  SJU:'America/Puerto_Rico', STT:'America/St_Thomas',
+  BNA:'America/Chicago', MDW:'America/Chicago', MCI:'America/Chicago',
+  MEM:'America/Chicago', MSP:'America/Chicago', MSY:'America/Chicago',
+  ORD:'America/Chicago', SAT:'America/Chicago', STL:'America/Chicago',
+  HOU:'America/Chicago', DAL:'America/Chicago', IAH:'America/Chicago',
+  DFW:'America/Chicago', OMA:'America/Chicago', MKE:'America/Chicago',
+  DSM:'America/Chicago', BHM:'America/Chicago', LIT:'America/Chicago',
+  TUL:'America/Chicago', OKC:'America/Chicago', XNA:'America/Chicago',
+  AUS:'America/Chicago',
+  ABQ:'America/Denver', DEN:'America/Denver', EGE:'America/Denver',
+  GJT:'America/Denver', HDN:'America/Denver', SLC:'America/Denver',
+  ASE:'America/Denver', BOI:'America/Denver', BZN:'America/Denver',
+  JAC:'America/Denver', FCA:'America/Denver', BIL:'America/Denver',
+  HLN:'America/Denver', GTF:'America/Denver', CPR:'America/Denver',
+  ANC:'America/Anchorage', FAI:'America/Anchorage', JNU:'America/Juneau',
+  KTN:'America/Sitka', SIT:'America/Sitka', BET:'America/Nome',
+  OME:'America/Nome', OTZ:'America/Nome', ADQ:'America/Anchorage',
+  HNL:'Pacific/Honolulu', OGG:'Pacific/Honolulu', KOA:'Pacific/Honolulu',
+  LIH:'Pacific/Honolulu', ITO:'Pacific/Honolulu',
+  LAX:'America/Los_Angeles', OAK:'America/Los_Angeles', SAN:'America/Los_Angeles',
+  SFO:'America/Los_Angeles', SJC:'America/Los_Angeles', SMF:'America/Los_Angeles',
+  BUR:'America/Los_Angeles', LGB:'America/Los_Angeles', ONT:'America/Los_Angeles',
+  SNA:'America/Los_Angeles', SBA:'America/Los_Angeles', FAT:'America/Los_Angeles',
+  RNO:'America/Los_Angeles', LAS:'America/Los_Angeles', PHX:'America/Phoenix',
+  TUS:'America/Phoenix', PDX:'America/Los_Angeles', SEA:'America/Los_Angeles',
+  GEG:'America/Los_Angeles', YKM:'America/Los_Angeles', BLI:'America/Los_Angeles',
+  // Canada
+  YYZ:'America/Toronto', YOW:'America/Toronto', YUL:'America/Toronto',
+  YHZ:'America/Halifax', YWG:'America/Winnipeg', YYC:'America/Edmonton',
+  YEG:'America/Edmonton', YVR:'America/Vancouver',
+  // Europe
+  LHR:'Europe/London', LGW:'Europe/London', STN:'Europe/London',
+  DUB:'Europe/Dublin', CDG:'Europe/Paris', ORY:'Europe/Paris',
+  AMS:'Europe/Amsterdam', FRA:'Europe/Berlin', MUC:'Europe/Berlin',
+  ZRH:'Europe/Zurich', VIE:'Europe/Vienna', BRU:'Europe/Brussels',
+  MAD:'Europe/Madrid', BCN:'Europe/Madrid', FCO:'Europe/Rome',
+  MXP:'Europe/Rome', ATH:'Europe/Athens', IST:'Europe/Istanbul',
+  CPH:'Europe/Copenhagen', ARN:'Europe/Stockholm', HEL:'Europe/Helsinki',
+  OSL:'Europe/Oslo', LIS:'Europe/Lisbon', WAW:'Europe/Warsaw',
+  PRG:'Europe/Prague', BUD:'Europe/Budapest',
+  // Middle East
+  DXB:'Asia/Dubai', AUH:'Asia/Dubai', DOH:'Asia/Qatar',
+  RUH:'Asia/Riyadh', JED:'Asia/Riyadh',
+  // Asia
+  NRT:'Asia/Tokyo', HND:'Asia/Tokyo', KIX:'Asia/Tokyo', CTS:'Asia/Tokyo',
+  ICN:'Asia/Seoul', GMP:'Asia/Seoul',
+  PEK:'Asia/Shanghai', PKX:'Asia/Shanghai', PVG:'Asia/Shanghai',
+  SHA:'Asia/Shanghai', CAN:'Asia/Shanghai', CTU:'Asia/Shanghai',
+  HKG:'Asia/Hong_Kong', SIN:'Asia/Singapore', BKK:'Asia/Bangkok',
+  DMK:'Asia/Bangkok', KUL:'Asia/Kuala_Lumpur', CGK:'Asia/Jakarta',
+  MNL:'Asia/Manila', DEL:'Asia/Kolkata', BOM:'Asia/Kolkata',
+  BLR:'Asia/Kolkata', HYD:'Asia/Kolkata', MAA:'Asia/Kolkata',
+  // Africa
+  JNB:'Africa/Johannesburg', CPT:'Africa/Johannesburg',
+  NBO:'Africa/Nairobi', LOS:'Africa/Lagos', ADD:'Africa/Addis_Ababa',
+  CAI:'Africa/Cairo', CMN:'Africa/Casablanca',
+  // Pacific
+  SYD:'Australia/Sydney', MEL:'Australia/Melbourne', BNE:'Australia/Brisbane',
+  PER:'Australia/Perth', AKL:'Pacific/Auckland', CHC:'Pacific/Auckland',
+  // Latin America
+  MEX:'America/Mexico_City', CUN:'America/Cancun', GDL:'America/Mexico_City',
+  MTY:'America/Monterrey', GRU:'America/Sao_Paulo', CGH:'America/Sao_Paulo',
+  GIG:'America/Sao_Paulo', BSB:'America/Sao_Paulo', EZE:'America/Argentina/Buenos_Aires',
+  AEP:'America/Argentina/Buenos_Aires', SCL:'America/Santiago',
+  LIM:'America/Lima', BOG:'America/Bogota', MDE:'America/Bogota',
+  UIO:'America/Guayaquil', NAS:'America/Nassau', MBJ:'America/Jamaica',
+  KIN:'America/Jamaica', PUJ:'America/Santo_Domingo', SDQ:'America/Santo_Domingo',
+  HAV:'America/Havana',
+};
+
+async function getAirportTz(code, apiKey) {
+  if (!code) return null;
+  if (TZ_MAP[code]) return TZ_MAP[code];
+  const ck = `tz:${code}`;
+  const cached = cacheGet(ck);
+  if (cached) return cached;
+  if (!apiKey) return null;
+  try {
+    const res = await fetch(`${FA_BASE}/airports/${code}`, {
+      headers: { 'x-apikey': apiKey, 'Accept': 'application/json' },
+    });
+    if (!res.ok) return null;
+    const d  = await res.json();
+    const tz = d?.timezone || null;
+    if (tz) cacheSet(ck, tz, CACHE_TTL.tz);
+    return tz;
+  } catch { return null; }
+}
 
 // ── Auth (paywall) ────────────────────────────────────────────────────────────
 //
@@ -231,6 +339,8 @@ function normalizeFA(flights, direction, airportCode) {
     airline:      f.operator_iata || f.operator || '',
     origin:       f.origin?.code_iata      || f.origin?.code      || (direction === 'dep' ? airportCode : ''),
     destination:  f.destination?.code_iata || f.destination?.code || (direction === 'arr' ? airportCode : ''),
+    originTz:     f.origin?.timezone      || null,
+    destTz:       f.destination?.timezone || null,
     // Gate times — displayed to passengers (can be from previous UTC day for
     // early-morning flights that push back just before midnight UTC)
     scheduledDep: f.scheduled_out || f.estimated_out || f.actual_out || null,
@@ -298,6 +408,8 @@ function normalizeAirLabs(flights, direction, airportCode) {
       airline:       f.airline_iata || f.airline_icao || '',
       origin:        f.dep_iata || (direction === 'dep' ? airportCode : ''),
       destination:   f.arr_iata || (direction === 'arr' ? airportCode : ''),
+      originTz:      null,  // AirLabs doesn't include timezones
+      destTz:        null,
       scheduledDep:  dep,
       scheduledArr:  arr,
       wheelsDep:     dep,  // AirLabs doesn't distinguish gate vs wheels
@@ -360,6 +472,8 @@ function normalizeAvStack(flights, direction, airportCode) {
       airline:       f.airline?.iata || f.airline?.name || '',
       origin:        f.departure?.iata || (direction === 'dep' ? airportCode : ''),
       destination:   f.arrival?.iata   || (direction === 'arr' ? airportCode : ''),
+      originTz:      f.departure?.timezone || null,
+      destTz:        f.arrival?.timezone   || null,
       scheduledDep:  dep,
       scheduledArr:  arr,
       wheelsDep:     dep,
@@ -407,13 +521,23 @@ async function flightsWithFallback(airportCode, dateStr, direction, env) {
 
     const ck = `flights:${p.name}:${airportCode}:${dateStr}:${direction}`;
     const cached = cacheGet(ck);
-    if (cached) return { flights: cached, source: `${p.name} (cached)` };
+    if (cached) return { flights: cached.flights, source: `${p.name} (cached)`, originTz: cached.originTz };
 
     try {
       const flights = await p.fn(airportCode, dateStr, direction, p.key);
       if (isNonEmpty(flights)) {
-        cacheSet(ck, flights, CACHE_TTL.flights);
-        return { flights, source: p.name };
+        // Resolve the queried airport's timezone: flight data → TZ_MAP → FA lookup
+        // (for arrivals the queried airport is the destination side)
+        const tzFromData = direction === 'dep' ? flights[0]?.originTz : flights[0]?.destTz;
+        const originTz = tzFromData || TZ_MAP[airportCode]
+                      || await getAirportTz(airportCode, env.FA_API_KEY);
+        const enriched = flights.map(f => ({
+          ...f,
+          originTz: f.originTz || (direction === 'dep' ? originTz : TZ_MAP[f.origin]) || null,
+          destTz:   f.destTz   || (direction === 'arr' ? originTz : TZ_MAP[f.destination]) || null,
+        }));
+        cacheSet(ck, { flights: enriched, originTz }, CACHE_TTL.flights);
+        return { flights: enriched, source: p.name, originTz };
       }
       errors.push(`${p.name}: 0 flights`);
     } catch (e) {
@@ -421,7 +545,7 @@ async function flightsWithFallback(airportCode, dateStr, direction, env) {
     }
   }
 
-  return { flights: [], source: 'none', errors };
+  return { flights: [], source: 'none', originTz: null, errors };
 }
 
 async function airportsWithFallback(query, env) {
@@ -505,7 +629,7 @@ export default {
       if (!dateStr) return jsonResponse({ error: 'Missing start param' }, 400, cors);
       try {
         const r = await flightsWithFallback(code, dateStr, 'dep', env);
-        return jsonResponse({ departures: r.flights, _source: r.source, _errors: r.errors || [] }, 200, cors);
+        return jsonResponse({ departures: r.flights, _source: r.source, _originTz: r.originTz || null, _errors: r.errors || [] }, 200, cors);
       } catch (e) {
         return jsonResponse({ departures: [], _source: 'error', error: e.message }, 500, cors);
       }
@@ -519,7 +643,7 @@ export default {
       if (!dateStr) return jsonResponse({ error: 'Missing start param' }, 400, cors);
       try {
         const r = await flightsWithFallback(code, dateStr, 'arr', env);
-        return jsonResponse({ arrivals: r.flights, _source: r.source, _errors: r.errors || [] }, 200, cors);
+        return jsonResponse({ arrivals: r.flights, _source: r.source, _originTz: r.originTz || null, _errors: r.errors || [] }, 200, cors);
       } catch (e) {
         return jsonResponse({ arrivals: [], _source: 'error', error: e.message }, 500, cors);
       }

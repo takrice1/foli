@@ -4,7 +4,7 @@ import FlightCard from './components/FlightCard.jsx';
 import LoginScreen from './components/LoginScreen.jsx';
 import {
   fetchDepartures, fetchArrivals,
-  parseFlights, getSource, toCard, firstAndLast,
+  parseFlights, getSource, getOriginTz, toCard, firstAndLast,
 } from './api.js';
 import { isLoggedIn, getEmail, logout } from './auth.js';
 import styles from './App.module.css';
@@ -73,6 +73,9 @@ export default function App() {
       const arrs   = firstAndLast(arrCards, 'rawArr', searchDate);
       const depSrc = getSource(depData);
       const arrSrc = getSource(arrData);
+      // Queried airport's IANA timezone for local-time display
+      const originTz = getOriginTz(depData) || getOriginTz(arrData)
+                    || airportMeta?.timezone || null;
 
       const displayName = airportMeta?.city
         ? `${airportMeta.city}${airportMeta.state ? `, ${airportMeta.state}` : ''}`
@@ -87,6 +90,7 @@ export default function App() {
           weekday: 'short', month: 'long', day: 'numeric', year: 'numeric',
         }),
         deps, arrs,
+        originTz,
         depSource: depSrc,
         arrSource: arrSrc,
       });
@@ -238,10 +242,10 @@ export default function App() {
             <div>
               <div className={styles.sectionLabel}>Departures from {results.code}</div>
               {results.deps.first
-                ? <FlightCard flight={results.deps.first} rank="first" />
+                ? <FlightCard flight={results.deps.first} rank="first" airportTz={results.originTz} />
                 : <p className={styles.empty}>No departures found for this date.</p>}
               {results.deps.last && depsDiffer &&
-                <FlightCard flight={results.deps.last} rank="last" />}
+                <FlightCard flight={results.deps.last} rank="last" airportTz={results.originTz} />}
             </div>
           )}
 
@@ -249,10 +253,10 @@ export default function App() {
             <div>
               <div className={styles.sectionLabel}>Arrivals into {results.code}</div>
               {results.arrs.first
-                ? <FlightCard flight={results.arrs.first} rank="first" />
+                ? <FlightCard flight={results.arrs.first} rank="first" airportTz={results.originTz} />
                 : <p className={styles.empty}>No arrivals found for this date.</p>}
               {results.arrs.last && arrsDiffer &&
-                <FlightCard flight={results.arrs.last} rank="last" />}
+                <FlightCard flight={results.arrs.last} rank="last" airportTz={results.originTz} />}
             </div>
           )}
 

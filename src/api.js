@@ -92,7 +92,9 @@ export async function fetchArrivals(airportCode, dateStr) {
 //   { ident, airline, origin, destination,
 //     scheduledDep, scheduledArr,   ← gate times (display)
 //     wheelsDep, wheelsArr,         ← wheels times (sort; always in queried window)
+//     originTz, destTz,             ← IANA timezones for local-time display
 //     aircraft, status }
+// Responses also carry _originTz: the queried airport's IANA timezone.
 
 export function parseFlights(data) {
   return data?.departures || data?.arrivals || [];
@@ -102,13 +104,38 @@ export function getSource(data) {
   return data?._source || '';
 }
 
-function fmtTime(iso) {
+export function getOriginTz(data) {
+  return data?._originTz || null;
+}
+
+// Format a UTC ISO string in an IANA timezone (airport-local).
+// Falls back to UTC with a "Z" suffix when the timezone is unknown.
+export function fmtLocalTime(iso, timezone) {
   if (!iso) return '—';
   try {
     return new Date(iso).toLocaleTimeString('en-US', {
-      hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC',
-    }) + 'Z';
-  } catch { return '—'; }
+      hour: '2-digit', minute: '2-digit', hour12: false,
+      timeZone: timezone || 'UTC',
+    }) + (timezone ? '' : 'Z');
+  } catch {
+    // Invalid timezone string — retry as UTC
+    try {
+      return new Date(iso).toLocaleTimeString('en-US', {
+        hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC',
+      }) + 'Z';
+    } catch { return '—'; }
+  }
+}
+
+// Short timezone label for the pill, e.g. "EST", "PST", "JST"
+export function tzAbbr(iso, timezone) {
+  if (!iso || !timezone) return '';
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone, timeZoneName: 'short',
+    }).formatToParts(new Date(iso))
+      .find(p => p.type === 'timeZoneName')?.value || '';
+  } catch { return ''; }
 }
 
 function calcDuration(dep, arr) {
@@ -132,8 +159,11 @@ export function toCard(f, direction, airportCode) {
     airline:       airlineName(f.airline || '—'),
     origin:        f.origin       || (direction === 'dep' ? airportCode : '—'),
     destination:   f.destination  || (direction === 'arr' ? airportCode : '—'),
-    departureTime: fmtTime(f.scheduledDep),
-    arrivalTime:   fmtTime(f.scheduledArr),
+    // Raw gate times + IANA timezones — FlightCard formats airport-local display
+    dispDep:       f.scheduledDep || null,
+    dispArr:       f.scheduledArr || null,
+    depTz:         f.originTz     || null,
+    arrTz:         f.destTz       || null,
     duration:      calcDuration(rawDep, rawArr),
     aircraft:      f.aircraft     || '',
     status:        f.status       || 'Scheduled',

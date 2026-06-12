@@ -14,7 +14,9 @@
 .timeCol { }
 .right { text-align: right; }
 .time { font-family: var(--mono); font-size: 22px; font-weight: 500; }
-.timeLabel { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+.timeLabel { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.right .timeLabel { justify-content: flex-end; }
+.tzPill { font-family: var(--mono); font-size: 8px; font-weight: 500; background: var(--border); color: var(--muted); padding: 1px 5px; border-radius: 4px; letter-spacing: 0.05em; text-transform: uppercase; }
 .mid { text-align: center; }
 .duration { font-family: var(--mono); font-size: 10px; color: var(--muted); }
 .divider { height: 1px; background: var(--border); margin: 5px 0; }

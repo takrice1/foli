@@ -62,7 +62,7 @@ export async function searchAirports(query) {
 // ── Flight data (single request; worker handles split-day + provider fallback) ─
 
 export async function fetchDepartures(airportCode, dateStr) {
-  const key = `foli:dep:${airportCode}:${dateStr}`;
+  const key = `foli:dep:v2:${airportCode}:${dateStr}`;
   const hit = cacheGet(key);
   if (hit) return hit;
 
@@ -75,7 +75,7 @@ export async function fetchDepartures(airportCode, dateStr) {
 }
 
 export async function fetchArrivals(airportCode, dateStr) {
-  const key = `foli:arr:${airportCode}:${dateStr}`;
+  const key = `foli:arr:v2:${airportCode}:${dateStr}`;
   const hit = cacheGet(key);
   if (hit) return hit;
 

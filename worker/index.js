@@ -680,11 +680,33 @@ async function flightsWithFallback(airportCode, dateStr, direction, env) {
         const tzFromData = direction === 'dep' ? flights[0]?.originTz : flights[0]?.destTz;
         const originTz = tzFromData || TZ_MAP[airportCode]
                       || await getAirportTz(airportCode, env.FA_API_KEY);
-        const enriched = flights.map(f => ({
+
+        // First pass: fill from flight data, the queried airport, and the static map
+        let enriched = flights.map(f => ({
           ...f,
           originTz: f.originTz || (direction === 'dep' ? originTz : TZ_MAP[f.origin]) || null,
           destTz:   f.destTz   || (direction === 'arr' ? originTz : TZ_MAP[f.destination]) || null,
         }));
+
+        // Second pass: any still-missing "other end" zones (small/unmapped airports
+        // on a non-FlightAware provider) — resolve once per unique code, in parallel.
+        // FA flight data already carries both ends, so this only fires on fallbacks.
+        const missing = new Set();
+        for (const f of enriched) {
+          if (!f.originTz && f.origin)      missing.add(f.origin);
+          if (!f.destTz   && f.destination) missing.add(f.destination);
+        }
+        if (missing.size) {
+          const codes   = [...missing];
+          const resolved = await Promise.all(codes.map(c => getAirportTz(c, env.FA_API_KEY)));
+          const tzByCode = Object.fromEntries(codes.map((c, i) => [c, resolved[i]]));
+          enriched = enriched.map(f => ({
+            ...f,
+            originTz: f.originTz || tzByCode[f.origin]      || null,
+            destTz:   f.destTz   || tzByCode[f.destination] || null,
+          }));
+        }
+
         cacheSet(ck, { flights: enriched, originTz }, CACHE_TTL.flights);
         return { flights: enriched, source: p.name, originTz };
       }

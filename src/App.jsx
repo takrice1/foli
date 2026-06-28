@@ -245,7 +245,7 @@ export default function App() {
         <div className={styles.loading}>
           <div className={styles.plane}>✈</div>
           <div className={styles.loadingTxt}>Querying all data sources…</div>
-          <div className={styles.loadingSub}>FlightAware → AirLabs → AviationStack</div>
+          <div className={styles.loadingSub}>FlightAware → AirLabs → AviationStack → AeroDataBox</div>
         </div>
       )}
 

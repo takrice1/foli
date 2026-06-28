@@ -36,6 +36,20 @@
 .logoutBtn { font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 10px; padding: 3px 10px; cursor: pointer; transition: all 0.15s; }
 .logoutBtn:hover { color: var(--ink); border-color: var(--ink); }
 
+/* ── Header right / tier badge ── */
+.headerRight { margin-top: 10px; }
+
+.proBadge { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; font-weight: 500; background: #d8f3dc; color: var(--green); padding: 4px 10px; border-radius: 20px; letter-spacing: 0.06em; }
+
+.upgradeChip { display: inline-flex; align-items: center; padding: 5px 12px; background: var(--accent); color: white; border: none; border-radius: 20px; font-family: var(--mono); font-size: 11px; font-weight: 500; cursor: pointer; letter-spacing: 0.06em; transition: opacity 0.15s; }
+.upgradeChip:hover { opacity: 0.88; }
+
+/* ── Usage bar ── */
+.usageBar { margin-top: 14px; display: flex; align-items: center; gap: 10px; }
+.usageTrack { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.usageFill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
+.usageLabel { font-family: var(--mono); font-size: 10px; color: var(--muted); white-space: nowrap; letter-spacing: 0.04em; }
+
 .subtitle {
   font-family: var(--mono);
   font-size: 11px;
@@ -58,12 +72,12 @@
 .dateLabel { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; display: block; }
 
 .dateTabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.dateTab { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 11px 8px; border: 2px solid var(--border); border-radius: var(--radius); background: var(--card); cursor: pointer; transition: all 0.15s; }
-.dateTab:hover { border-color: var(--ink); }
-.dateTabActive { background: var(--ink); border-color: var(--ink); }
-.dateTabLabel { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: var(--muted); }
-.dateTabDay { font-family: var(--sans); font-size: 11px; color: var(--muted); }
-.dateTabActive .dateTabLabel, .dateTabActive .dateTabDay { color: var(--paper); }
+.dateTab { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 12px 16px; border: 2px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--muted); font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; position: relative; transition: all 0.15s; }
+.dateTab:hover { border-color: var(--ink); color: var(--ink); }
+.dateTabActive { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.dateTabSub { font-family: var(--mono); font-size: 10px; font-weight: 400; opacity: 0.65; letter-spacing: 0.05em; }
+.dateTabLocked { opacity: 0.55; }
+.lockIcon { position: absolute; top: 6px; right: 8px; font-size: 11px; }
 
 .goBtn { width: 100%; padding: 16px; background: var(--ink); color: var(--paper); border: none; border-radius: var(--radius); font-family: var(--mono); font-size: 14px; font-weight: 500; letter-spacing: 0.08em; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 3px 3px 0 var(--accent); margin-top: 4px; }
 .goBtn:hover:not(:disabled) { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--accent); }

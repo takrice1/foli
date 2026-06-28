@@ -3,6 +3,9 @@ import AirportPicker from './components/AirportPicker.jsx';
 import FlightCard from './components/FlightCard.jsx';
 import LoginScreen from './components/LoginScreen.jsx';
 import ContactUs from './components/ContactUs.jsx';
+import Paywall from './components/Paywall.jsx';
+import SubscriptionModal from './components/SubscriptionModal.jsx';
+import { useSubscription } from './hooks/useSubscription.js';
 import {
   fetchDepartures, fetchArrivals,
   parseFlights, getSource, getOriginTz, toCard, firstAndLast,
@@ -14,8 +17,16 @@ function todayStr() {
   return new Date().toISOString().split('T')[0];
 }
 
+function tomorrowStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split('T')[0];
+}
+
 export default function App() {
   const [authed, setAuthed]           = useState(isLoggedIn());
+  const sub                           = useSubscription();
+
   const [airport, setAirport]         = useState('');
   const [airportMeta, setAirportMeta] = useState(null);
   const [destination, setDest]        = useState('');
@@ -26,8 +37,6 @@ export default function App() {
   const [results, setResults]         = useState(null);
   const [error, setError]             = useState(null);
 
-  // Reset results whenever airport, destination, or date changes so a stale
-  // lookup is never shown alongside new search inputs
   function handleAirport(code, meta) {
     setAirport(code);
     setAirportMeta(meta || null);
@@ -51,6 +60,12 @@ export default function App() {
 
   async function search(overrideDate) {
     if (!airport) return;
+
+    if (!sub.canSearch()) {
+      sub.openPaywall();
+      return;
+    }
+
     const searchDate = overrideDate ?? date;
     setLoading(true); setError(null); setResults(null);
 
@@ -63,18 +78,15 @@ export default function App() {
       let depCards = parseFlights(depData).map(f => toCard(f, 'dep', airport));
       let arrCards = parseFlights(arrData).map(f => toCard(f, 'arr', airport));
 
-      // Optional route filter
       if (destination) {
         depCards = depCards.filter(f => f.destination === destination);
         arrCards = arrCards.filter(f => f.origin      === destination);
       }
 
-      // Pass date so firstAndLast can filter out off-date edge-case flights
-      const deps   = firstAndLast(depCards, 'rawDep', searchDate);
-      const arrs   = firstAndLast(arrCards, 'rawArr', searchDate);
-      const depSrc = getSource(depData);
-      const arrSrc = getSource(arrData);
-      // Queried airport's IANA timezone for local-time display
+      const deps     = firstAndLast(depCards, 'rawDep', searchDate);
+      const arrs     = firstAndLast(arrCards, 'rawArr', searchDate);
+      const depSrc   = getSource(depData);
+      const arrSrc   = getSource(arrData);
       const originTz = getOriginTz(depData) || getOriginTz(arrData)
                     || airportMeta?.timezone || null;
 
@@ -95,6 +107,9 @@ export default function App() {
         depSource: depSrc,
         arrSource: arrSrc,
       });
+
+      sub.recordSearch();
+
     } catch (e) {
       if (e.authExpired) { setAuthed(false); return; }
       setError(e.message || 'Failed to fetch flight data.');
@@ -130,10 +145,42 @@ export default function App() {
             <button className={styles.logoutBtn} onClick={handleLogout}>Log out</button>
           </span>
         </div>
+
+        {/* Tier badge / upgrade chip */}
+        <div className={styles.headerRight}>
+          {sub.isPro ? (
+            <span className={styles.proBadge}>
+              {sub.isBeta ? '🧪 Beta' : '⭐ Pro'}
+            </span>
+          ) : (
+            <button className={styles.upgradeChip} onClick={sub.openModal}>
+              Upgrade · $4.99/mo
+            </button>
+          )}
+        </div>
+
         <p className={styles.subtitle}>
           First &amp; last flights at any airport worldwide —<br />
           every major, regional, and commuter airline.
         </p>
+
+        {/* Free tier usage bar */}
+        {!sub.isPro && (
+          <div className={styles.usageBar}>
+            <div className={styles.usageTrack}>
+              <div
+                className={styles.usageFill}
+                style={{ width: `${(sub.searchCount / 3) * 100}%` }}
+              />
+            </div>
+            <span className={styles.usageLabel}>
+              {sub.searchesRemaining > 0
+                ? `${sub.searchesRemaining} free search${sub.searchesRemaining !== 1 ? 'es' : ''} left today`
+                : 'Daily limit reached'}
+            </span>
+          </div>
+        )}
+
         <div className={styles.runway} />
       </header>
 
@@ -150,23 +197,27 @@ export default function App() {
         <div className={styles.dateField}>
           <label className={styles.dateLabel}>Date</label>
           <div className={styles.dateTabs}>
-            {[0, 1].map(offset => {
-              const d = new Date();
-              d.setDate(d.getDate() + offset);
-              const str  = d.toISOString().slice(0, 10);
-              const day  = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-              const lbl  = offset === 0 ? 'Today' : 'Tomorrow';
-              return (
-                <button
-                  key={offset}
-                  className={`${styles.dateTab} ${date === str ? styles.dateTabActive : ''}`}
-                  onClick={() => selectDate(str)}
-                >
-                  <span className={styles.dateTabLabel}>{lbl}</span>
-                  <span className={styles.dateTabDay}>{day}</span>
-                </button>
-              );
-            })}
+            <button
+              className={`${styles.dateTab} ${date === todayStr() ? styles.dateTabActive : ''}`}
+              onClick={() => selectDate(todayStr())}
+              type="button"
+            >
+              📅 Today
+              <span className={styles.dateTabSub}>
+                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            </button>
+            <button
+              className={`${styles.dateTab} ${date === tomorrowStr() ? styles.dateTabActive : ''} ${!sub.canSearchTomorrow ? styles.dateTabLocked : ''}`}
+              onClick={() => sub.canSearchTomorrow ? selectDate(tomorrowStr()) : sub.openModal()}
+              type="button"
+            >
+              📅 Tomorrow
+              <span className={styles.dateTabSub}>
+                {new Date(tomorrowStr() + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+              {!sub.canSearchTomorrow && <span className={styles.lockIcon}>🔒</span>}
+            </button>
           </div>
         </div>
         <button
@@ -177,6 +228,14 @@ export default function App() {
           {loading ? '⏳ Searching…' : '✈ Find First & Last Flights'}
         </button>
       </section>
+
+      {/* ── Paywall (inline, after limit hit) ── */}
+      {sub.showPaywall && !loading && (
+        <Paywall
+          onUpgrade={() => { sub.closePaywall(); sub.openModal(); }}
+          onDismiss={sub.closePaywall}
+        />
+      )}
 
       {/* ── Loading ── */}
       {loading && (
@@ -270,6 +329,11 @@ export default function App() {
         <span className={styles.footerTag}>First Out · Last In · Powered by FlightAware, AirLabs &amp; AviationStack</span>
         <ContactUs />
       </footer>
+
+      {/* ── Subscription Modal ── */}
+      {sub.showModal && (
+        <SubscriptionModal sub={sub} onClose={sub.closeModal} />
+      )}
 
     </div>
   );

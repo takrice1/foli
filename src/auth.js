@@ -26,6 +26,7 @@ export function logout() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(EMAIL_KEY);
     localStorage.removeItem(PLAN_KEY);
+    sessionStorage.clear();
   } catch { /* ignore */ }
 }
 

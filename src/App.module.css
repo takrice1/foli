@@ -123,7 +123,7 @@
 
 /* ── Result header extras ── */
 .apCity { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
-.apFullName { font-family: var(--mono); font-size: 10px; color: var(--muted); margin: -12px 0 14px; padding-left: 2px; }
+.apFullName { font-family: var(--mono); font-size: 10px; color: var(--muted); margin: 2px 0 14px; padding-left: 2px; }
 
 /* ── Source badges ── */
 .sourceBadges { display: flex; align-items: center; gap: 4px; margin: 10px 0 18px; flex-wrap: wrap; }

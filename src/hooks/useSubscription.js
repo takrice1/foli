@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { getPlan } from '../auth.js';
 
 const STORAGE_KEY   = 'foli_sub';
 const SEARCHES_KEY  = 'foli_searches';
@@ -26,6 +27,11 @@ function todayKey() {
 
 function loadSub() {
   try {
+    // Server-granted plan (stored on login) takes priority over client-side sub
+    const jwtPlan = getPlan();
+    if (jwtPlan === 'beta' || jwtPlan === 'pro') {
+      return { tier: jwtPlan, source: 'jwt' };
+    }
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }

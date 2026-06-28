@@ -99,9 +99,12 @@ export default function App() {
         displayName,
         fullName:    airportMeta?.name || '',
         dateStr:     searchDate,
-        date: new Date(searchDate + 'T12:00:00').toLocaleDateString('en-US', {
-          weekday: 'short', month: 'long', day: 'numeric', year: 'numeric',
-        }),
+        date: (() => {
+          const d = new Date(searchDate + 'T12:00:00');
+          return isNaN(d) ? (searchDate || '') : d.toLocaleDateString('en-US', {
+            weekday: 'short', month: 'long', day: 'numeric', year: 'numeric',
+          });
+        })(),
         deps, arrs,
         originTz,
         depSource: depSrc,
